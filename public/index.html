@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bonsole</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.tailwindcss.com" defer></script>
+    <style>
+        ::-moz-selection {
+            color: #09090b;
+            background: #fafafa
+        }
+
+        ::selection {
+            color: #09090b;
+            background: #fafafa
+        }
+
+        #userInput {
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            word-break: break-all;
+        }
+    </style>
+    <script>
+        const apiUrl = "http://localhost:3000/api";
+        async function main() {
+            try {
+                const response = await fetch(apiUrl + "/start");
+                const text = await response.text();
+                $("#first").text(JSON.parse(text).text);
+            } catch (e) {
+                console.error(e);
+            }
+
+            const text = `PS C:\\Users\\skittlexyz\\a> `;
+            let currentText = text;
+            $("#promptString").text(text);
+
+            $(document).keydown((e) => {
+                e.preventDefault();
+                currentText = $("#userInput").text();
+                if (e.key.length === 1 || e.key === " ") {
+                    currentText += e.key;
+                    $("#userInput").text(currentText);
+                } else if (e.keyCode == 8) {
+                    if (e.ctrlKey) {
+                        if (currentText.endsWith(' ')) {
+                            const words = currentText.trim().split(/\s+/);
+                            if (words.length > 0) {
+                                words.pop();
+                                currentText = words.join(' ') + ' ';
+                            }
+                        } else {
+                            const words = currentText.split(/\s+/);
+                            if (words.length > 0) {
+                                words.pop();
+                                currentText = words.join(' ');
+                            }
+                        }
+                    } else { currentText = currentText.substring(0, currentText.length - 1); }
+                    $("#userInput").text(currentText);
+                }
+            });
+
+            $(document).keydown((e) => {
+                if ($("#userInput").text() == " ") $("#userInput").text("")
+            });
+
+            $(document).keydown(async (e) => {
+                if (e.key == "Enter") {
+                    let command = $("#userInput").text();
+                    const response = await fetch(apiUrl + "/command", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ "command": command }),
+                    });
+                    if (!response.ok) {
+                        throw new Error("An error has occured while posting commmand !");
+                        return;
+                    }
+                    let data;
+                    try { data = await response.json() }
+                    catch (e) {
+                        return;
+                    };
+
+                    let newLine = $("#line").clone(true);
+
+                    $("#line").attr("id", "");
+                    $("#promptString").attr("id", "");
+                    $("#userInput").attr("id", "");
+
+                    $(".closed-line:nth-child(1)").clone(false).appendTo("body");
+
+                    const htmlEntities = {
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '&': '&amp;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    };
+
+                    $(".closed-line:last-of-type").html(
+                        "<pre class='w-auto'>" +
+                        data.stdout.replace(/[<>&"']/g, (match) => htmlEntities[match]) +
+                        "</pre>"
+                    );
+
+                    $("body").append(newLine);
+                    $("#userInput").text("");
+
+                    $("*").forEach((el) => el.off());
+                    main();
+                }
+
+            });
+        }
+        $(document).ready(main());
+    </script>
+</head>
+
+<body class="bg-[color:rgb(9,9,11)] text-[color:rgb(250,250,250)] p-4 w-screen overflow-x-clip">
+    <!-- <div class="absolute p-4 top-0 right-0 flex flex-col">
+        <button
+            class="text-2xl w-12 h-12 flex justify-center items-center rounded-md bg-[color:rgb(39,39,42)] text-[color:rgb(250,250,250)] hover:bg-[color:rgb(33,33,36)] duration-100">
+            <i class="bi bi-gear"></i>
+        </button>
+    </div> -->
+    <div class="flex w-full closed-line">
+        <pre id="first" class="w-auto"></pre>
+    </div>
+
+    <div class="flex w-full" id="line">
+        <pre id="promptString" class="w-auto"></pre>
+        <div class="w-full">
+            <pre id="userInput" class="text-wrap w-fit"></pre>
+        </div>
+    </div>
+</body>
+
+</html>
