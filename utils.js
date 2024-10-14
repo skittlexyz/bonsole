@@ -1,6 +1,7 @@
 import moment from "moment";
 import cliColor from "cli-color";
 import { exec } from "child_process";
+import iconv from 'iconv-lite';
 
 function log(text, type = "") {
     const logType = (
@@ -25,7 +26,7 @@ function run(command) {
     return new Promise((resolve, reject) => {
         exec(command, { enconding: "buffer"}, (err, stdout, stderr) => {
             console.log(stdout);
-            resolve({ err, stdout, stderr });
+            resolve({ err, stdout: iconv.decode(stdout, "cp850"), stderr: iconv.decode(stderr, "cp850") });
         });
     });
 }
